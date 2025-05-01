@@ -25,15 +25,27 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// OneSignal initialization script
+// OneSignal initialization script with error handling
 const initializeOneSignalScript = document.createElement('script');
 initializeOneSignalScript.src = "https://cdn.onesignal.com/sdks/OneSignalSDK.js";
-document.head.appendChild(initializeOneSignalScript);
+initializeOneSignalScript.onerror = (error) => {
+  console.error('Không thể tải OneSignal SDK:', error);
+  // Tạo đối tượng OneSignal giả để tránh lỗi
+  window.OneSignal = window.OneSignal || {
+    push: () => {},
+    init: () => {},
+    getUserId: (callback: Function) => callback(null)
+  };
+};
 
 // Initialize OneSignal when script is loaded
 initializeOneSignalScript.onload = () => {
+  console.log('OneSignal SDK loaded successfully');
   window.OneSignal = window.OneSignal || [];
 };
+
+// Thêm script vào head
+document.head.appendChild(initializeOneSignalScript);
 
 // Create a type declaration for window.OneSignal
 declare global {

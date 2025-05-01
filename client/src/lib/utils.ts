@@ -40,22 +40,54 @@ export const initializeOneSignal = async (playerId?: string) => {
     try {
       const OneSignal = (window as any).OneSignal;
       
+      // Thiết lập giá trị mặc định cho các biến môi trường
+      const appId = import.meta.env.VITE_ONESIGNAL_APP_ID || 
+                   process.env.VITE_ONESIGNAL_APP_ID || 
+                   "placeholder-app-id";
+      
+      // Tùy chỉnh cài đặt WebSocket để sửa lỗi
       await OneSignal.init({
-        appId: import.meta.env.VITE_ONESIGNAL_APP_ID || process.env.VITE_ONESIGNAL_APP_ID || "",
+        appId: appId,
         notifyButton: {
           enable: true,
         },
         allowLocalhostAsSecureOrigin: true,
+        // Thêm các cài đặt để vô hiệu hóa kết nối WebSocket nếu không cần thiết
+        promptOptions: {
+          slidedown: {
+            enabled: true,
+            autoPrompt: false,
+          }
+        },
+        // Vô hiệu hóa các tính năng không cần thiết
+        welcomeNotification: {
+          disable: true
+        },
+        // Hạn chế các yêu cầu mạng không cần thiết
+        persistNotification: false
       });
       
-      // Update user's player ID if logged in
-      if (playerId) {
-        OneSignal.setExternalUserId(playerId);
+      // Thêm xử lý lỗi và thử lại cho các hoạt động của OneSignal
+      try {
+        // Update user's player ID if logged in
+        if (playerId) {
+          OneSignal.setExternalUserId(playerId);
+        }
+      } catch (err) {
+        console.warn("Error setting external user ID:", err);
       }
       
       return OneSignal;
     } catch (error) {
       console.error("Error initializing OneSignal:", error);
+      // Trả về đối tượng giả lập nếu khởi tạo thất bại
+      return {
+        getUserId: (callback: Function) => callback(null),
+        showNativePrompt: () => {},
+        registerForPushNotifications: () => Promise.resolve(),
+        setExternalUserId: () => {},
+        sendTag: () => {}
+      };
     }
   }
   return null;

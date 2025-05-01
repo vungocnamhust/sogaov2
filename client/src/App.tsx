@@ -1,6 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+// Import only what we need
 import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
@@ -41,10 +40,10 @@ function App() {
   // Service worker registration is now handled in main.tsx
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       <Router />
       <Toaster />
-    </QueryClientProvider>
+    </>
   );
 }
 
