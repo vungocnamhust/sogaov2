@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 30% 96%;
+    --foreground: 30 10% 17%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 30 10% 17%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 10% 17%;
+    
+    --primary: 40 29% 38%;
+    --primary-foreground: 40 33% 96%;
+    
+    --secondary: 120 23% 33%;
+    --secondary-foreground: 40 33% 96%;
+    
+    --muted: 30 5% 88%;
+    --muted-foreground: 30 10% 47%;
+    
+    --accent: 34 68% 70%;
+    --accent-foreground: 30 10% 17%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 30 10% 88%;
+    --input: 30 10% 88%;
+    --ring: 40 29% 38%;
+
+    --radius: 0.5rem;
+
+    --chart-1: 40 29% 38%;
+    --chart-2: 120 23% 33%;
+    --chart-3: 34 68% 70%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 30 10% 47%;
+  }
+  
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply font-sans antialiased bg-neutral-lightest text-neutral-darkest;
+  }
+}
+
+/* Custom CSS for inter and playfair display fonts */
+.font-sans {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-display {
+  font-family: 'Playfair Display', serif;
+}
+
+/* Custom colors */
+.bg-neutral-lightest {
+  background-color: #F9F6F0;
+}
+
+.text-neutral-lightest {
+  color: #F9F6F0;
+}
+
+.bg-neutral-light {
+  background-color: #E5E1D8;
+}
+
+.text-neutral-light {
+  color: #E5E1D8;
+}
+
+.bg-neutral {
+  background-color: #7A7672;
+}
+
+.text-neutral {
+  color: #7A7672;
+}
+
+.bg-neutral-dark {
+  background-color: #4D4B48;
+}
+
+.text-neutral-dark {
+  color: #4D4B48;
+}
+
+.bg-neutral-darkest {
+  background-color: #2C2C2C;
+}
+
+.text-neutral-darkest {
+  color: #2C2C2C;
+}
+
+.bg-primary {
+  background-color: #7C6A46;
+}
+
+.text-primary {
+  color: #7C6A46;
+}
+
+.bg-primary-light {
+  background-color: #9E8A5E;
+}
+
+.text-primary-light {
+  color: #9E8A5E;
+}
+
+.bg-primary-dark {
+  background-color: #5C4D33;
+}
+
+.text-primary-dark {
+  color: #5C4D33;
+}
+
+.bg-secondary {
+  background-color: #4A6741;
+}
+
+.text-secondary {
+  color: #4A6741;
+}
+
+.bg-secondary-light {
+  background-color: #648557;
+}
+
+.text-secondary-light {
+  color: #648557;
+}
+
+.bg-secondary-dark {
+  background-color: #334A2D;
+}
+
+.text-secondary-dark {
+  color: #334A2D;
+}
+
+.bg-accent {
+  background-color: #E8B87D;
+}
+
+.text-accent {
+  color: #E8B87D;
+}
+
+.bg-accent-light {
+  background-color: #F1D0A5;
+}
+
+.text-accent-light {
+  color: #F1D0A5;
+}
+
+.bg-accent-dark {
+  background-color: #C99457;
+}
+
+.text-accent-dark {
+  color: #C99457;
+}
+
+.bg-success {
+  background-color: #4CAF50;
+}
+
+.text-success {
+  color: #4CAF50;
+}
+
+.bg-error {
+  background-color: #F44336;
+}
+
+.text-error {
+  color: #F44336;
+}
+
+.bg-warning {
+  background-color: #FF9800;
+}
+
+.text-warning {
+  color: #FF9800;
+}
