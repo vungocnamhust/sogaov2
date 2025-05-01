@@ -7,6 +7,7 @@ import axios from "axios";
 import crypto from "crypto";
 import { ZodError } from "zod";
 import session from "express-session";
+import { WebSocketServer, WebSocket } from "ws";
 
 // Extend the Express Request type to include session
 declare module "express-session" {
@@ -633,5 +634,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Thiết lập WebSocket server cho real-time updates
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws' 
+  });
+  
+  wss.on('connection', (ws: WebSocket) => {
+    console.log('WebSocket client connected');
+    
+    // Gửi thông báo chào mừng
+    ws.send(JSON.stringify({ type: 'connection', message: 'Connected to WebSocket server' }));
+    
+    // Xử lý tin nhắn từ client
+    ws.on('message', (message: string) => {
+      console.log('Received message:', message);
+      
+      try {
+        const data = JSON.parse(message.toString());
+        
+        // Xử lý các loại tin nhắn khác nhau
+        if (data.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    });
+    
+    // Xử lý khi client ngắt kết nối
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+    });
+  });
+  
   return httpServer;
 }
