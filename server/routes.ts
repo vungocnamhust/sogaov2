@@ -7,8 +7,6 @@ import axios from "axios";
 import crypto from "crypto";
 import { ZodError } from "zod";
 import session from "express-session";
-import { WebSocketServer, WebSocket } from "ws";
-
 // Extend the Express Request type to include session
 declare module "express-session" {
   interface SessionData {
@@ -181,39 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get admin token to check if notifications are enabled
       const zaloSettings = await storage.getZaloSettings();
       
-      // Send push notification to admin if OneSignal is configured (sử dụng REST API v1 mới nhất)
-      if (process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_REST_API_KEY) {
-        try {
-          // Send notification to admin (tagged with role=admin)
-          await axios.post(
-            'https://onesignal.com/api/v1/notifications',
-            {
-              app_id: process.env.ONESIGNAL_APP_ID,
-              filters: [{ field: 'tag', key: 'role', relation: '=', value: 'admin' }], // Lọc theo tag trong OneSignal v16
-              headings: { en: 'Đơn hàng mới', vi: 'Đơn hàng mới' },
-              contents: { 
-                en: `${user.name} đã đặt ${validatedData.quantity}kg gạo`, 
-                vi: `${user.name} đã đặt ${validatedData.quantity}kg gạo` 
-              },
-              data: { 
-                order_id: newOrder.id,
-                url: '/admin/dashboard'
-              },
-              web_buttons: [
-                { id: 'admin_view', text: 'Xem đơn hàng', url: '/admin/dashboard' }
-              ]
-            },
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Basic ${process.env.ONESIGNAL_REST_API_KEY}`
-              }
-            }
-          );
-        } catch (error) {
-          console.error('Error sending OneSignal notification:', error);
-        }
-      }
+      // Không sử dụng OneSignal cho thông báo
       
       // Send Zalo notification if connected and enabled
       if (zaloSettings?.access_token && zaloSettings.send_new_order_notification) {
@@ -387,55 +353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get Zalo settings
       const zaloSettings = await storage.getZaloSettings();
       
-      // Send push notification to user if OneSignal is configured and user has player_id
-      if (process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_REST_API_KEY && order.user.player_id) {
-        try {
-          let title = '';
-          let message = '';
-          
-          if (status === 'completed') {
-            title = 'Đơn hàng đã hoàn thành';
-            message = `Đơn hàng #${id.substring(0, 6)} của bạn đã được giao thành công.`;
-          } else if (status === 'canceled') {
-            title = 'Đơn hàng đã bị hủy';
-            message = `Đơn hàng #${id.substring(0, 6)} của bạn đã bị hủy.`;
-          } else {
-            title = 'Cập nhật đơn hàng';
-            message = `Đơn hàng #${id.substring(0, 6)} của bạn đã được cập nhật.`;
-          }
-          
-          // Sử dụng REST API của OneSignal v16
-          await axios.post(
-            'https://onesignal.com/api/v1/notifications',
-            {
-              app_id: process.env.ONESIGNAL_APP_ID,
-              include_player_ids: [order.user.player_id], // Sử dụng OneSignal v16 với player_ids
-              headings: { en: title, vi: title },
-              contents: { en: message, vi: message },
-              data: { 
-                order_id: order.id,
-                url: '/orders'
-              },
-              web_url: '/orders', // Thêm web_url để di chuyển đến trang đơn hàng
-              web_buttons: [
-                { id: 'view_order', text: 'Xem đơn hàng', url: '/orders' }
-              ]
-            },
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Basic ${process.env.ONESIGNAL_REST_API_KEY}`
-              }
-            }
-          );
-        } catch (error: any) {
-          console.error('Error sending OneSignal notification:', error);
-          // Log chi tiết hơn về lỗi
-          if (error.response) {
-            console.error('OneSignal API response error:', error.response.data);
-          }
-        }
-      }
+      // Không sử dụng OneSignal để gửi thông báo
       
       // Send Zalo notification if connected and enabled
       if (zaloSettings?.access_token && zaloSettings.send_status_update_notification) {
@@ -641,72 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   
-  // Lưu trữ WebSocket connections theo user ID
-  const wsConnections: Record<string, WebSocket[]> = {};
-  
-  // Thiết lập WebSocket server cho real-time updates
-  const wss = new WebSocketServer({ 
-    server: httpServer, 
-    path: '/ws' 
-  });
-  
-  wss.on('connection', (ws: WebSocket) => {
-    console.log('WebSocket client connected');
-    let userId = '';
-    
-    // Gửi thông báo chào mừng
-    ws.send(JSON.stringify({ type: 'connection', message: 'Connected to WebSocket server' }));
-    
-    // Xử lý tin nhắn từ client
-    ws.on('message', (message: string) => {
-      try {
-        const data = JSON.parse(message.toString());
-        console.log('Received message:', data);
-        
-        // Xử lý các loại tin nhắn khác nhau
-        if (data.type === 'ping') {
-          ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
-        } 
-        // Xử lý đăng ký user ID
-        else if (data.type === 'register' && data.userId) {
-          userId = data.userId;
-          console.log(`Registering WebSocket for user: ${userId}`);
-          
-          // Lưu kết nối theo user ID
-          if (userId) {
-            if (!wsConnections[userId]) {
-              wsConnections[userId] = [];
-            }
-            wsConnections[userId].push(ws);
-          }
-          
-          // Thông báo đăng ký thành công
-          ws.send(JSON.stringify({ 
-            type: 'registered', 
-            userId, 
-            message: 'Successfully registered for real-time updates' 
-          }));
-        }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    });
-    
-    // Xử lý khi client ngắt kết nối
-    ws.on('close', () => {
-      console.log('WebSocket client disconnected');
-      
-      // Xóa kết nối khỏi danh sách nếu đã đăng ký
-      if (userId && wsConnections[userId]) {
-        wsConnections[userId] = wsConnections[userId].filter(conn => conn !== ws);
-        
-        // Xóa danh sách nếu không còn kết nối
-        if (wsConnections[userId].length === 0) {
-          delete wsConnections[userId];
-        }
-      }
-    });
-  });
+  // Không sử dụng WebSocket
   
   return httpServer;
 }
