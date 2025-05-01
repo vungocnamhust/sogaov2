@@ -63,23 +63,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           const OneSignal = await initializeOneSignal();
           if (OneSignal) {
-            OneSignal.getUserId((id: string) => {
-              if (id && id !== user.player_id) {
-                // Update player_id on server
-                fetch('/api/users/player-id', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ player_id: id }),
-                  credentials: 'include',
-                }).catch(console.error);
+            try {
+              // Sử dụng phương thức mới của OneSignal v16
+              if (OneSignal.getDeviceState) {
+                // Cách mới (v16)
+                const deviceState = await OneSignal.getDeviceState();
+                if (deviceState && deviceState.userId && deviceState.userId !== user.player_id) {
+                  // Cập nhật player_id trên server
+                  fetch('/api/users/player-id', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ player_id: deviceState.userId }),
+                    credentials: 'include',
+                  }).catch(console.error);
+                }
+              } else {
+                // Cách cũ
+                OneSignal.getUserId((id: string) => {
+                  if (id && id !== user.player_id) {
+                    // Cập nhật player_id trên server
+                    fetch('/api/users/player-id', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ player_id: id }),
+                      credentials: 'include',
+                    }).catch(console.error);
+                  }
+                });
               }
-            });
-            
-            // Request notification permission
-            OneSignal.showNativePrompt();
+              
+              // Yêu cầu quyền thông báo - phương thức chung
+              if (OneSignal.showNativePrompt) {
+                OneSignal.showNativePrompt();
+              }
+            } catch (err) {
+              console.warn("Lỗi khi lấy thông tin thiết bị OneSignal:", err);
+            }
           }
         } catch (error) {
-          console.error("Error setting up OneSignal:", error);
+          console.error("Lỗi khởi tạo OneSignal:", error);
         }
       };
       

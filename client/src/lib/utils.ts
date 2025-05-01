@@ -34,64 +34,75 @@ export const formatDateTime = (date: string | Date) => {
   }).format(d);
 };
 
-// OneSignal initialization
+// OneSignal initialization - sử dụng phiên bản mới (v16)
 export const initializeOneSignal = async (playerId?: string) => {
-  if (typeof window !== "undefined" && "OneSignal" in window) {
+  // Kiểm tra xem OneSignal đã được khởi tạo chưa
+  if (typeof window !== "undefined") {
     try {
-      const OneSignal = (window as any).OneSignal;
-      
-      // Thiết lập giá trị mặc định cho các biến môi trường
-      const appId = import.meta.env.VITE_ONESIGNAL_APP_ID || 
-                   process.env.VITE_ONESIGNAL_APP_ID || 
-                   "placeholder-app-id";
-      
-      // Tùy chỉnh cài đặt WebSocket để sửa lỗi
-      await OneSignal.init({
-        appId: appId,
-        notifyButton: {
-          enable: true,
-        },
-        allowLocalhostAsSecureOrigin: true,
-        // Thêm các cài đặt để vô hiệu hóa kết nối WebSocket nếu không cần thiết
-        promptOptions: {
-          slidedown: {
-            enabled: true,
-            autoPrompt: false,
+      // Chờ cho đến khi OneSignal được tải
+      const waitForOneSignal = (maxWaitTime = 3000) => {
+        return new Promise<any>((resolve) => {
+          if (window.OneSignal) {
+            return resolve(window.OneSignal);
           }
-        },
-        // Vô hiệu hóa các tính năng không cần thiết
-        welcomeNotification: {
-          disable: true
-        },
-        // Hạn chế các yêu cầu mạng không cần thiết
-        persistNotification: false
-      });
+          
+          let waitTime = 0;
+          const interval = 100;
+          const checkOneSignal = setInterval(() => {
+            waitTime += interval;
+            if (window.OneSignal) {
+              clearInterval(checkOneSignal);
+              resolve(window.OneSignal);
+            } else if (waitTime >= maxWaitTime) {
+              clearInterval(checkOneSignal);
+              console.warn('Đã hết thời gian chờ OneSignal');
+              resolve(null);
+            }
+          }, interval);
+        });
+      };
+      
+      // Đợi OneSignal khởi tạo (tối đa 3 giây)
+      const OneSignal = await waitForOneSignal();
+      
+      if (!OneSignal) {
+        return createFakeOneSignal();
+      }
       
       // Thêm xử lý lỗi và thử lại cho các hoạt động của OneSignal
       try {
-        // Update user's player ID if logged in
+        // Cập nhật player ID nếu đã đăng nhập
         if (playerId) {
-          OneSignal.setExternalUserId(playerId);
+          // Sử dụng OneSignal v16 API
+          await OneSignal.login(playerId);
         }
       } catch (err) {
-        console.warn("Error setting external user ID:", err);
+        console.warn("Lỗi khi thiết lập ID người dùng OneSignal:", err);
       }
       
       return OneSignal;
     } catch (error) {
-      console.error("Error initializing OneSignal:", error);
-      // Trả về đối tượng giả lập nếu khởi tạo thất bại
-      return {
-        getUserId: (callback: Function) => callback(null),
-        showNativePrompt: () => {},
-        registerForPushNotifications: () => Promise.resolve(),
-        setExternalUserId: () => {},
-        sendTag: () => {}
-      };
+      console.error("Lỗi khởi tạo OneSignal:", error);
+      return createFakeOneSignal();
     }
   }
   return null;
 };
+
+// Tạo đối tượng OneSignal giả để tránh lỗi
+function createFakeOneSignal() {
+  return {
+    getUserId: (callback: Function) => callback(null),
+    getExternalUserId: () => null,
+    showNativePrompt: () => {},
+    registerForPushNotifications: () => Promise.resolve(),
+    setExternalUserId: () => {},
+    login: () => Promise.resolve(),
+    logout: () => Promise.resolve(),
+    sendTag: () => {},
+    init: () => Promise.resolve()
+  };
+}
 
 // Check if app is installed (running in standalone mode)
 export const isAppInstalled = () => {

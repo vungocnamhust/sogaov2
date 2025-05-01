@@ -181,8 +181,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get admin token to check if notifications are enabled
       const zaloSettings = await storage.getZaloSettings();
       
-      // Send push notification to admin if OneSignal is configured
-      if (process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_API_KEY) {
+      // Send push notification to admin if OneSignal is configured (sử dụng REST API v1 mới nhất)
+      if (process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_REST_API_KEY) {
         try {
           // Send notification to admin (tagged with role=admin)
           await axios.post(
@@ -199,14 +199,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 order_id: newOrder.id,
                 url: '/admin/dashboard'
               },
-              buttons: [
-                { id: 'admin_view', text: 'Xem đơn hàng' }
+              web_buttons: [
+                { id: 'admin_view', text: 'Xem đơn hàng', url: '/admin/dashboard' }
               ]
             },
             {
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Basic ${process.env.ONESIGNAL_API_KEY}`
+                'Authorization': `Basic ${process.env.ONESIGNAL_REST_API_KEY}`
               }
             }
           );
@@ -388,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const zaloSettings = await storage.getZaloSettings();
       
       // Send push notification to user if OneSignal is configured and user has player_id
-      if (process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_API_KEY && order.user.player_id) {
+      if (process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_REST_API_KEY && order.user.player_id) {
         try {
           let title = '';
           let message = '';
@@ -404,30 +404,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message = `Đơn hàng #${id.substring(0, 6)} của bạn đã được cập nhật.`;
           }
           
+          // Sử dụng REST API của OneSignal v16
           await axios.post(
             'https://onesignal.com/api/v1/notifications',
             {
               app_id: process.env.ONESIGNAL_APP_ID,
-              include_player_ids: [order.user.player_id],
+              include_external_user_ids: [order.user.player_id], // Sử dụng external_user_ids thay vì player_ids trong v16
               headings: { en: title, vi: title },
               contents: { en: message, vi: message },
               data: { 
                 order_id: order.id,
                 url: '/orders'
               },
-              buttons: [
-                { id: 'view_order', text: 'Xem đơn hàng' }
+              web_url: '/orders', // Thêm web_url để di chuyển đến trang đơn hàng
+              web_buttons: [
+                { id: 'view_order', text: 'Xem đơn hàng', url: '/orders' }
               ]
             },
             {
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Basic ${process.env.ONESIGNAL_API_KEY}`
+                'Authorization': `Basic ${process.env.ONESIGNAL_REST_API_KEY}`
               }
             }
           );
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error sending OneSignal notification:', error);
+          // Log chi tiết hơn về lỗi
+          if (error.response) {
+            console.error('OneSignal API response error:', error.response.data);
+          }
         }
       }
       

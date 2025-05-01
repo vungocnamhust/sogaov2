@@ -43,20 +43,32 @@ export default function RegistrationForm() {
   const { refreshUser } = useAuth();
   const [playerId, setPlayerId] = useState<string | null>(null);
 
-  // Initialize OneSignal to get player ID
+  // Initialize OneSignal to get player ID (v16)
   useEffect(() => {
     const setupOneSignal = async () => {
       try {
         const OneSignal = await initializeOneSignal();
         if (OneSignal) {
-          OneSignal.getUserId((id: string) => {
-            if (id) {
-              setPlayerId(id);
+          try {
+            // V16 API sử dụng OSDeviceState thay vì getUserId
+            const deviceState = await OneSignal.getDeviceState();
+            if (deviceState && deviceState.userId) {
+              setPlayerId(deviceState.userId);
+            } else {
+              // Fallback cho phiên bản cũ
+              OneSignal.getUserId && OneSignal.getUserId((id: string) => {
+                if (id) {
+                  setPlayerId(id);
+                }
+              });
             }
-          });
+          } catch (err) {
+            console.warn("Lỗi lấy ID thiết bị từ OneSignal:", err);
+          }
         }
       } catch (error) {
-        console.error("Error setting up OneSignal:", error);
+        console.error("Lỗi thiết lập OneSignal:", error);
+        // Tiếp tục đăng ký mà không có player ID
       }
     };
     

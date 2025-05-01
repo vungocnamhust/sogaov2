@@ -158,8 +158,28 @@ self.addEventListener('fetch', event => {
   }
 });
 
-// Handle push notifications
+// Khởi tạo OneSignal trên Service Worker
+self.importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
+// Handle push notifications - supports both OneSignal v16 and standard Push API
 self.addEventListener('push', event => {
+  // Kiểm tra nếu là thông báo OneSignal (được xử lý bởi OneSignalSDK.sw.js)
+  if (self.OneSignal && event.data) {
+    try {
+      // Thử parse dữ liệu từ OneSignal
+      const notification = event.data.json();
+      if (notification && notification.custom && notification.custom.i) {
+        // Đây là thông báo OneSignal, để SDK xử lý
+        console.log('OneSignal push notification received');
+        return;
+      }
+    } catch (e) {
+      // Không phải định dạng OneSignal, xử lý như thông báo thông thường
+      console.log('Push notification parsing error:', e);
+    }
+  }
+  
+  // Xử lý như thông báo push tiêu chuẩn
   let payload = {};
   
   try {
@@ -178,6 +198,9 @@ self.addEventListener('push', event => {
     badge: '/icons/icon-96x96.png',
     data: payload.data || {},
     actions: payload.actions || [],
+    // Thêm các tùy chọn mới cho nền tảng web hiện đại
+    vibrate: [200, 100, 200],
+    requireInteraction: true,
   };
 
   event.waitUntil(
@@ -185,15 +208,29 @@ self.addEventListener('push', event => {
   );
 });
 
-// Handle notification clicks
+// Handle notification clicks - supports both OneSignal v16 and standard Push Notifications
 self.addEventListener('notificationclick', event => {
-  event.notification.close();
+  // Kiểm tra xem có phải thông báo OneSignal không
+  const notification = event.notification;
+  const isOneSignalNotification = notification.data && 
+                                  notification.data.custom && 
+                                  notification.data.custom.i;
+  
+  // Đóng thông báo
+  notification.close();
 
+  // Nếu là thông báo OneSignal, để SDK xử lý
+  if (isOneSignalNotification && self.OneSignal) {
+    // OneSignal sẽ xử lý tự động
+    console.log('OneSignal notification clicked, SDK will handle');
+    return;
+  }
+  
   let clickResponsePromise;
   
-  // Check if action button was clicked
+  // Xử lý cho các thông báo thông thường
   if (event.action) {
-    // Handle action buttons
+    // Xử lý các action button
     if (event.action === 'view_order') {
       clickResponsePromise = clients.openWindow('/orders');
     } else if (event.action === 'admin_view') {
@@ -202,22 +239,22 @@ self.addEventListener('notificationclick', event => {
       clickResponsePromise = Promise.resolve();
     }
   } else {
-    // Default action - open app or specific page based on data
-    const urlToOpen = event.notification.data.url || '/';
+    // Hành động mặc định - mở app hoặc trang cụ thể dựa trên data
+    const urlToOpen = notification.data && notification.data.url ? notification.data.url : '/';
     
     clickResponsePromise = clients.matchAll({
       type: 'window',
       includeUncontrolled: true
     })
     .then(windowClients => {
-      // Check if a window client is available
+      // Kiểm tra xem có window client nào đang mở không
       for (let client of windowClients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           return client.focus();
         }
       }
       
-      // If no window client is available, open a new window
+      // Nếu không có window client nào đang mở, mở cửa sổ mới
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }

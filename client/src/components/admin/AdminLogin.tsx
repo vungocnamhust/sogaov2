@@ -55,15 +55,28 @@ export default function AdminLogin() {
       try {
         const OneSignal = await initializeOneSignal();
         if (OneSignal) {
-          // Register for notifications
-          await OneSignal.registerForPushNotifications();
-          // Set external user ID (admin)
-          await OneSignal.setExternalUserId("admin");
-          // Add admin tag for targeting
-          await OneSignal.sendTag("role", "admin");
+          try {
+            // V16 API sử dụng các phương thức mới
+            // Đảm bảo sử dụng API mới cho tất cả các chức năng
+            if (OneSignal.login) {
+              // Cách mới v16
+              await OneSignal.login("admin");
+              // Thêm tag cho admin để nhắm mục tiêu thông báo
+              await OneSignal.User.addTag("role", "admin");
+            } else {
+              // Fallback cho v15 hoặc cũ hơn
+              await OneSignal.registerForPushNotifications?.();
+              await OneSignal.setExternalUserId?.("admin");
+              await OneSignal.sendTag?.("role", "admin");
+            }
+          } catch (err) {
+            console.warn("Lỗi khi thiết lập thông báo cho admin:", err);
+            // Vẫn cho phép đăng nhập kể cả khi OneSignal thất bại
+          }
         }
       } catch (error) {
-        console.error("Error setting up OneSignal:", error);
+        console.error("Lỗi thiết lập OneSignal:", error);
+        // Vẫn tiếp tục đăng nhập kể cả khi OneSignal thất bại
       }
       
       toast({

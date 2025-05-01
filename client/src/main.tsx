@@ -25,33 +25,57 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// OneSignal initialization script with error handling
-const initializeOneSignalScript = document.createElement('script');
-initializeOneSignalScript.src = "https://cdn.onesignal.com/sdks/OneSignalSDK.js";
-initializeOneSignalScript.onerror = (error) => {
-  console.error('Không thể tải OneSignal SDK:', error);
-  // Tạo đối tượng OneSignal giả để tránh lỗi
-  window.OneSignal = window.OneSignal || {
-    push: () => {},
-    init: () => {},
-    getUserId: (callback: Function) => callback(null)
-  };
-};
-
-// Initialize OneSignal when script is loaded
-initializeOneSignalScript.onload = () => {
-  console.log('OneSignal SDK loaded successfully');
-  window.OneSignal = window.OneSignal || [];
-};
-
-// Thêm script vào head
-document.head.appendChild(initializeOneSignalScript);
-
-// Create a type declaration for window.OneSignal
+// Create a type declaration for window.OneSignal and OneSignalDeferred
 declare global {
   interface Window {
     OneSignal: any;
+    OneSignalDeferred: {
+      push: (callback: (instance: any) => void) => number;
+      [key: number]: any;
+    };
   }
+}
+
+// OneSignal initialization script with error handling
+try {
+  // Tạo và thêm script OneSignal mới (v16)
+  const oneSignalScript = document.createElement('script');
+  oneSignalScript.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
+  oneSignalScript.defer = true;
+  oneSignalScript.onerror = (error) => {
+    console.error('Không thể tải OneSignal SDK:', error);
+    // Tạo đối tượng OneSignal giả để tránh lỗi
+    window.OneSignal = window.OneSignal || {};
+    window.OneSignalDeferred = {
+      push: (callback) => {
+        console.warn('OneSignal không khả dụng, bỏ qua callback');
+        return 0;
+      }
+    };
+  };
+  
+  document.head.appendChild(oneSignalScript);
+  
+  // Khởi tạo OneSignal với cấu hình mới
+  if (!window.OneSignalDeferred) {
+    window.OneSignalDeferred = [] as any;
+  }
+  
+  window.OneSignalDeferred.push(async function(OneSignalInstance: any) {
+    try {
+      await OneSignalInstance.init({
+        appId: import.meta.env.VITE_ONESIGNAL_APP_ID || "8a432abf-2df3-4318-b3d1-8eeddf6497b6",
+      });
+      console.log('OneSignal khởi tạo thành công');
+    } catch (err) {
+      console.error('Lỗi khởi tạo OneSignal:', err);
+      // Không làm gì thêm, cho phép ứng dụng tiếp tục chạy
+    }
+  });
+} catch (err) {
+  // Xử lý mọi ngoại lệ có thể xảy ra trong quá trình cài đặt
+  console.error('Lỗi thiết lập OneSignal:', err);
+  // Đảm bảo ứng dụng vẫn tiếp tục chạy
 }
 
 createRoot(document.getElementById("root")!).render(
