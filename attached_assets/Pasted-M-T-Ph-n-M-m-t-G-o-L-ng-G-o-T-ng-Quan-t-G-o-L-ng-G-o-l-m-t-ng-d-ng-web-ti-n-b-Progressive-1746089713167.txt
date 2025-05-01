@@ -1,0 +1,95 @@
+Mô Tả Phần Mềm: Đặt Gạo Làng Gạo
+Tổng Quan
+Đặt Gạo Làng Gạo là một ứng dụng web tiến bộ (Progressive Web App - PWA) được phát triển để quản lý việc đặt gạo sinh thái. Ứng dụng cung cấp hai giao diện chính: giao diện người dùng để đặt gạo và giao diện quản trị viên để quản lý đơn hàng. Được xây dựng với React, TypeScript và Tailwind CSS, ứng dụng này mang đến trải nghiệm mượt mà trên cả thiết bị di động và máy tính.
+
+Tính Năng Chính
+1. Quản Lý Người Dùng
+Đăng ký một lần duy nhất: Người dùng chỉ cần đăng ký thông tin cá nhân và tổng lượng gạo một lần
+Lưu trữ thông tin: Hệ thống lưu trữ dữ liệu người dùng cả ở local storage và cơ sở dữ liệu
+Theo dõi số dư gạo: Tự động cập nhật số lượng gạo còn lại sau mỗi đơn hàng
+2. Hệ Thống Đặt Hàng
+Đặt gạo dễ dàng: Chọn số lượng và địa chỉ giao hàng chỉ với vài thao tác
+Kiểm soát số lượng: Giới hạn đặt hàng dựa trên số gạo còn lại của người dùng
+Thông báo xác nhận: Hiển thị thông báo thành công sau khi đặt hàng
+3. Quản Lý Đơn Hàng (Admin)
+Xác thực an toàn: Hệ thống đăng nhập bảo mật với mã khóa riêng
+Theo dõi đơn hàng: Hiển thị tất cả đơn hàng với thông tin chi tiết và phân trang
+Cập nhật trạng thái: Quản lý trạng thái đơn (đang xử lý, hoàn thành, đã hủy)
+Tích hợp Zalo OA: Kết nối với Zalo Official Account để gửi thông báo
+4. Hệ Thống Thông Báo
+Push notification: Tích hợp OneSignal cho thông báo đẩy
+Thông báo đơn mới: Tự động gửi thông báo khi có đơn hàng mới
+Kết nối Zalo: Gửi thông báo qua Zalo Notification Service (ZNS)
+5. Tính Năng PWA
+Cài đặt như ứng dụng: Có thể cài đặt trên điện thoại như ứng dụng native
+Hoạt động offline: Service worker cho phép sử dụng một số tính năng khi không có kết nối
+Tùy chỉnh giao diện: Manifest riêng biệt cho người dùng và admin
+Chi Tiết Logic Tính Năng
+1. Quản Lý Người Dùng
+Đăng Ký Tài Khoản
+Người dùng nhập thông tin cá nhân (tên, số điện thoại, địa chỉ) và tổng số gạo đăng ký
+Hệ thống tạo tài khoản mới với giá trị rice_total và rice_left ban đầu bằng nhau
+Dữ liệu người dùng được lưu trong cơ sở dữ liệu và local storage để sử dụng nhanh chóng
+Quản Lý Số Dư Gạo
+Mỗi khi đặt hàng, rice_left của người dùng giảm tương ứng với số lượng đặt
+Khi admin hủy đơn, rice_left được cộng lại tương ứng với số lượng trong đơn
+Người dùng không thể đặt số lượng gạo lớn hơn rice_left hiện tại
+2. Hệ Thống Đặt Hàng
+Quy Trình Đặt Hàng
+Kiểm tra người dùng đã đăng nhập, nếu chưa chuyển đến trang đăng ký
+Hiển thị số gạo còn lại và cho phép chọn số lượng đặt (tối đa là rice_left)
+Cho phép cập nhật địa chỉ nhận hàng từ thông tin người dùng
+Khi đặt hàng:
+Tạo đơn hàng mới với trạng thái "pending"
+Cập nhật số gạo còn lại của người dùng (trừ đi số lượng đặt)
+Gửi thông báo đến admin nếu có player ID được cấu hình
+Hiển thị thông báo thành công và chuyển về trang chủ
+3. Quản Lý Đơn Hàng (Admin)
+Xác Thực Admin
+Admin đăng nhập bằng mã khóa riêng
+Hệ thống lưu token xác thực trong local storage và sử dụng cho các yêu cầu API
+Tự động đăng ký nhận thông báo qua OneSignal khi đăng nhập thành công
+Quản Lý Đơn Hàng
+Hiển thị danh sách đơn hàng với thông tin chi tiết (người đặt, số lượng, địa chỉ, trạng thái)
+Phân trang khi có nhiều đơn hàng
+Chức năng thay đổi trạng thái đơn hàng với logic phức tạp:
+Hoàn thành đơn (pending → completed): Không thay đổi số gạo người dùng
+Hủy đơn (pending → canceled): Cộng lại số gạo đã trừ cho người dùng
+Hủy đơn đã hoàn thành (completed → canceled): Cộng lại số gạo cho người dùng
+Kích hoạt lại đơn (canceled → pending): Trừ lại số gạo từ tài khoản người dùng
+Chuyển đơn hủy thành hoàn thành (canceled → completed): Trừ lại số gạo từ tài khoản người dùng
+Tích Hợp Zalo OA
+Thiết lập kết nối với Zalo Official Account thông qua xác thực OAuth
+Sử dụng PKCE (Proof Key for Code Exchange) để đảm bảo an toàn
+Lưu trữ token xác thực trong cơ sở dữ liệu để sử dụng cho các thông báo ZNS
+4. Hệ Thống Thông Báo
+OneSignal Push Notification
+Tích hợp OneSignal SDK để gửi và nhận thông báo đẩy
+Tự động đăng ký thiết bị khi người dùng truy cập
+Xử lý thông báo trong Service Worker với các tùy chọn hiển thị và hành động khi nhấp
+Xử Lý Thông Báo
+Khi có đơn hàng mới, gửi thông báo đến admin
+Service Worker xử lý thông báo khi ứng dụng không hoạt động
+Khi người dùng nhấp vào thông báo, mở ứng dụng và chuyển đến trang liên quan
+5. Cài Đặt PWA
+Cơ Chế Cài Đặt
+Phát hiện nếu ứng dụng đang chạy trong chế độ standalone
+Hiển thị gợi ý cài đặt tùy chỉnh khi người dùng chưa cài đặt
+Sử dụng sự kiện beforeinstallprompt để cung cấp trải nghiệm cài đặt mượt mà
+Tùy chỉnh manifest dựa trên vai trò người dùng (khách hàng hoặc admin)
+Service Worker
+Quản lý bộ nhớ đệm cho hoạt động offline
+Xử lý thông báo đẩy khi ứng dụng không hoạt động
+Cập nhật tự động khi có phiên bản mới của ứng dụng
+Xử lý các sự kiện như notificationclick để điều hướng người dùng
+Giao Diện Khác Nhau
+Manifest riêng cho người dùng (manifest.json) và admin (admin-manifest.json)
+Tự động chuyển đổi manifest dựa trên đường dẫn hiện tại
+Tùy chỉnh màu chủ đề, biểu tượng và tên ứng dụng cho từng vai trò
+6. Xử Lý Lỗi
+Sử dụng Error Boundary để ngăn ứng dụng sập hoàn toàn
+Hiển thị thông báo lỗi thân thiện với người dùng
+Cung cấp tùy chọn tải lại hoặc quay lại trang chủ khi xảy ra lỗi
+Ghi log lỗi để theo dõi và khắc phục
+Ứng dụng được xây dựng với phương châm đơn giản hóa quy trình đặt gạo, đồng thời cung cấp công cụ quản lý hiệu quả cho admin, tất cả trong một giao diện thân thiện và dễ sử dụng.
+
