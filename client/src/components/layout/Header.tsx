@@ -44,10 +44,8 @@ export default function Header({ isAdmin = false }: HeaderProps) {
           {isAdmin ? (
             <ul className="hidden md:flex space-x-6 items-center">
               <li>
-                <Link href="/admin/dashboard">
-                  <a className={`font-medium hover:text-primary transition ${location === '/admin/dashboard' ? 'text-primary' : 'text-neutral-dark'}`}>
-                    Quản lý đơn hàng
-                  </a>
+                <Link href="/admin/dashboard" className={`font-medium hover:text-primary transition ${location === '/admin/dashboard' ? 'text-primary' : 'text-neutral-dark'}`}>
+                  Quản lý đơn hàng
                 </Link>
               </li>
               <li>
@@ -66,24 +64,18 @@ export default function Header({ isAdmin = false }: HeaderProps) {
           ) : (
             <ul className="hidden md:flex space-x-6 items-center">
               <li>
-                <Link href="/">
-                  <a className={`font-medium hover:text-primary transition ${location === '/' ? 'text-primary' : 'text-neutral-dark'}`}>
-                    Trang chủ
-                  </a>
+                <Link href="/" className={`font-medium hover:text-primary transition ${location === '/' ? 'text-primary' : 'text-neutral-dark'}`}>
+                  Trang chủ
                 </Link>
               </li>
               <li>
-                <Link href="/orders">
-                  <a className={`font-medium hover:text-primary transition ${location === '/orders' ? 'text-primary' : 'text-neutral-dark'}`}>
-                    Lịch sử đặt hàng
-                  </a>
+                <Link href="/orders" className={`font-medium hover:text-primary transition ${location === '/orders' ? 'text-primary' : 'text-neutral-dark'}`}>
+                  Lịch sử đặt hàng
                 </Link>
               </li>
               <li>
-                <Link href="/#orderForm">
-                  <a className="bg-primary hover:bg-primary-dark text-white font-medium px-4 py-2 rounded-lg transition">
-                    Đặt gạo ngay
-                  </a>
+                <Link href="/#orderForm" className="bg-primary hover:bg-primary-dark text-white font-medium px-4 py-2 rounded-lg transition">
+                  Đặt gạo ngay
                 </Link>
               </li>
             </ul>
