@@ -120,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Update user's player_id for push notifications
   app.post("/api/users/player-id", async (req: Request, res: Response) => {
-    if (!(req as any).user) {
+    if (!req.user) {
       return res.status(401).json({ message: "Không tìm thấy người dùng." });
     }
     
@@ -131,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Player ID không được để trống." });
       }
       
-      const updatedUser = await storage.updateUserPlayerID((req as any).user.id, player_id);
+      const updatedUser = await storage.updateUserPlayerID(req.user.id, player_id);
       
       return res.json(updatedUser);
     } catch (error) {
@@ -144,12 +144,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Create new order
   app.post("/api/orders", async (req: Request, res: Response) => {
-    if (!(req as any).user) {
+    if (!req.user) {
       return res.status(401).json({ message: "Vui lòng đăng nhập để đặt hàng." });
     }
     
     try {
-      const user = (req as any).user;
+      const user = req.user;
       const validatedData = insertOrderSchema.parse({
         ...req.body,
         user_id: user.id
@@ -238,12 +238,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get user's orders
   app.get("/api/orders", async (req: Request, res: Response) => {
-    if (!(req as any).user) {
+    if (!req.user) {
       return res.status(401).json({ message: "Vui lòng đăng nhập để xem đơn hàng." });
     }
     
     try {
-      const user = (req as any).user;
+      const user = req.user;
       const orders = await storage.getOrdersByUserId(user.id);
       
       return res.json(orders);
