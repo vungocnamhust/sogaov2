@@ -512,7 +512,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const state = crypto.randomBytes(16).toString('hex');
       
       // Get redirect URI from environment
-      const redirectUri = process.env.ZALO_REDIRECT_URI || "";
+      // Combine domain with redirect path
+      const host = req.headers.host || '';
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+      const baseUrl = `${protocol}://${host}`;
+      const redirectUri = `${baseUrl}${process.env.ZALO_REDIRECT_URI || ""}`;
       
       // Generate Zalo OAuth URL based on documentation
       const appId = process.env.ZALO_APP_ID || "";
