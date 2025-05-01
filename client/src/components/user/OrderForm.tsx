@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -83,9 +83,9 @@ export default function OrderForm() {
   const quantity = form.watch("quantity");
   
   // Update preview when quantity changes
-  useState(() => {
+  useEffect(() => {
     updateOrderPreview(quantity);
-  });
+  }, [quantity]);
 
   // Create order mutation
   const orderMutation = useMutation({
