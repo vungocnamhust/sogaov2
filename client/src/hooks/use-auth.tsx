@@ -62,8 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     staleTime: 60 * 1000, // 1 minute
     retry: 1, // Limit retries to prevent infinite loading
     retryDelay: 1000, // 1 second between retries
-    // Prevent blocking the UI on errors
-    useErrorBoundary: false,
+    // Không sử dụng ErrorBoundary
   });
 
   // Tạm thời bỏ qua initializing OneSignal để đảm bảo ứng dụng hoạt động ổn định

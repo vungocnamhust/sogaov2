@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
-import { initializeOneSignal } from "@/lib/utils";
+
 
 const formSchema = z.object({
   access_token: z.string().min(1, {
@@ -29,7 +29,7 @@ type AdminLoginFormValues = z.infer<typeof formSchema>;
 export default function AdminLogin() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [loading, setLoading] = useState(false);
+  // Không cần trạng thái loading nữa vì không sử dụng OneSignal
 
   // Define form with default values
   const form = useForm<AdminLoginFormValues>({
@@ -50,34 +50,7 @@ export default function AdminLogin() {
       // Store token
       localStorage.setItem('admin_token', data.token);
       
-      // Initialize OneSignal for admin notifications
-      setLoading(true);
-      try {
-        const OneSignal = await initializeOneSignal();
-        if (OneSignal) {
-          try {
-            // V16 API sử dụng các phương thức mới
-            // Đảm bảo sử dụng API mới cho tất cả các chức năng
-            if (OneSignal.login) {
-              // Cách mới v16
-              await OneSignal.login("admin");
-              // Thêm tag cho admin để nhắm mục tiêu thông báo
-              await OneSignal.User.addTag("role", "admin");
-            } else {
-              // Fallback cho v15 hoặc cũ hơn
-              await OneSignal.registerForPushNotifications?.();
-              await OneSignal.setExternalUserId?.("admin");
-              await OneSignal.sendTag?.("role", "admin");
-            }
-          } catch (err) {
-            console.warn("Lỗi khi thiết lập thông báo cho admin:", err);
-            // Vẫn cho phép đăng nhập kể cả khi OneSignal thất bại
-          }
-        }
-      } catch (error) {
-        console.error("Lỗi thiết lập OneSignal:", error);
-        // Vẫn tiếp tục đăng nhập kể cả khi OneSignal thất bại
-      }
+      // Không sử dụng OneSignal cho thông báo
       
       toast({
         title: "Đăng nhập thành công",
@@ -86,7 +59,6 @@ export default function AdminLogin() {
       
       // Redirect to admin dashboard
       setLocation("/admin/dashboard");
-      setLoading(false);
     },
     onError: (error) => {
       toast({
@@ -129,9 +101,9 @@ export default function AdminLogin() {
           <Button 
             type="submit" 
             className="w-full bg-primary hover:bg-primary-dark text-white font-medium py-3 px-4 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            disabled={loginMutation.isPending || loading}
+            disabled={loginMutation.isPending}
           >
-            {loginMutation.isPending || loading ? "Đang xử lý..." : "Đăng nhập"}
+            {loginMutation.isPending ? "Đang xử lý..." : "Đăng nhập"}
           </Button>
         </form>
       </Form>
