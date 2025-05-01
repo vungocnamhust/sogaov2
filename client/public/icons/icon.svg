@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#F9F6F0"/>
+  
+  <!-- Rice Bowl -->
+  <path d="M128 240C128 186.981 170.981 144 224 144H288C341.019 144 384 186.981 384 240V320C384 346.51 362.51 368 336 368H176C149.49 368 128 346.51 128 320V240Z" fill="#7C6A46"/>
+  
+  <!-- Rice grains -->
+  <ellipse cx="216" cy="256" rx="24" ry="32" fill="#F9F6F0"/>
+  <ellipse cx="264" cy="272" rx="24" ry="32" fill="#F9F6F0"/>
+  <ellipse cx="312" cy="248" rx="24" ry="32" fill="#F9F6F0"/>
+  <ellipse cx="240" cy="224" rx="24" ry="32" fill="#F9F6F0"/>
+  <ellipse cx="288" cy="208" rx="24" ry="32" fill="#F9F6F0"/>
+  
+  <!-- Steam -->
+  <path d="M208 144C208 144 224 112 256 112C288 112 304 144 304 144" stroke="#7C6A46" stroke-width="12" stroke-linecap="round"/>
+  <path d="M224 120C224 120 240 88 256 88" stroke="#7C6A46" stroke-width="12" stroke-linecap="round"/>
+  <path d="M288 120C288 120 272 88 256 88" stroke="#7C6A46" stroke-width="12" stroke-linecap="round"/>
+</svg>
