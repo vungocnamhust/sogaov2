@@ -9,7 +9,7 @@ const urlsToCache = [
   '/offline.html',
   '/manifest.json',
   '/admin-manifest.json',
-  '/src/index.css',
+  // CSS is bundled by Vite, don't try to cache raw CSS files
   '/icons/icon-72x72.png',
   '/icons/icon-96x96.png',
   '/icons/icon-128x128.png',
@@ -18,20 +18,45 @@ const urlsToCache = [
   '/icons/icon-192x192.png',
   '/icons/icon-384x384.png',
   '/icons/icon-512x512.png',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap',
-  'https://images.unsplash.com/photo-1586201375761-83865001e8cf?ixlib=rb-1.2.1&auto=format&fit=crop&w=50&q=80',
-  'https://images.unsplash.com/photo-1586201375761-83865001e8cf?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80'
+  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap'
 ];
 
-// Install event - cache assets
+// Install event - cache assets with error handling
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Cache opened');
-        return cache.addAll(urlsToCache);
+        
+        // Cache each resource individually to handle failures gracefully
+        return Promise.all(
+          urlsToCache.map(url => {
+            // Try to cache each URL, but catch errors to prevent the entire caching from failing
+            return fetch(url)
+              .then(response => {
+                // Only cache valid responses
+                if (response.status === 200) {
+                  return cache.put(url, response);
+                }
+                console.warn('Failed to cache:', url, response.status);
+              })
+              .catch(error => {
+                console.warn('Failed to fetch for caching:', url, error.message);
+                // Continue despite the error
+                return Promise.resolve();
+              });
+          })
+        );
       })
-      .then(() => self.skipWaiting())
+      .then(() => {
+        console.log('Installation completed successfully');
+        return self.skipWaiting();
+      })
+      .catch(error => {
+        console.error('Service worker installation failed:', error);
+        // Continue with installation even if caching fails
+        return self.skipWaiting();
+      })
   );
 });
 
@@ -54,10 +79,14 @@ self.addEventListener('activate', event => {
 
 // Fetch event - serve cached content when offline
 self.addEventListener('fetch', event => {
-  // Skip cross-origin requests
+  // Don't handle non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Only handle specific origins and domains
   if (event.request.url.startsWith(self.location.origin) || 
-      event.request.url.includes('fonts.googleapis.com') ||
-      event.request.url.includes('images.unsplash.com')) {
+      event.request.url.includes('fonts.googleapis.com')) {
     
     event.respondWith(
       caches.match(event.request)
@@ -74,7 +103,7 @@ self.addEventListener('fetch', event => {
           return fetch(fetchRequest)
             .then(response => {
               // Check if we received a valid response
-              if (!response || response.status !== 200 || response.type !== 'basic') {
+              if (!response || response.status !== 200) {
                 return response;
               }
 
@@ -84,20 +113,46 @@ self.addEventListener('fetch', event => {
               // Open cache and store the response
               caches.open(CACHE_NAME)
                 .then(cache => {
-                  cache.put(event.request, responseToCache);
+                  try {
+                    cache.put(event.request, responseToCache);
+                  } catch (e) {
+                    console.warn('Cache put error:', e);
+                  }
+                })
+                .catch(error => {
+                  console.warn('Cache open error:', error);
                 });
 
               return response;
             })
             .catch(error => {
+              console.warn('Fetch failed:', error);
               // Network failed, check if it's a navigation request
               if (event.request.mode === 'navigate') {
-                return caches.match(OFFLINE_URL);
+                return caches.match(OFFLINE_URL)
+                  .catch(err => {
+                    console.error('Failed to fetch offline page:', err);
+                    // Return a basic offline response if everything fails
+                    return new Response('You are offline and the cached offline page is not available.', {
+                      status: 503,
+                      statusText: 'Service Unavailable',
+                      headers: new Headers({
+                        'Content-Type': 'text/plain'
+                      })
+                    });
+                  });
               }
               
-              // Return error for other requests
-              throw error;
+              // Return empty response for non-navigation requests
+              return new Response('', {
+                status: 408,
+                statusText: 'Request timed out'
+              });
             });
+        })
+        .catch(error => {
+          console.error('Error in fetch handler:', error);
+          return caches.match(OFFLINE_URL);
         })
     );
   }
