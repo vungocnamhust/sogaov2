@@ -652,7 +652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   wss.on('connection', (ws: WebSocket) => {
     console.log('WebSocket client connected');
-    let userId: string | null = null;
+    let userId = '';
     
     // Gửi thông báo chào mừng
     ws.send(JSON.stringify({ type: 'connection', message: 'Connected to WebSocket server' }));
@@ -673,10 +673,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Registering WebSocket for user: ${userId}`);
           
           // Lưu kết nối theo user ID
-          if (!wsConnections[userId]) {
-            wsConnections[userId] = [];
+          if (userId) {
+            if (!wsConnections[userId]) {
+              wsConnections[userId] = [];
+            }
+            wsConnections[userId].push(ws);
           }
-          wsConnections[userId].push(ws);
           
           // Thông báo đăng ký thành công
           ws.send(JSON.stringify({ 
