@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [localStorageUser, setLocalStorageUser] = useState<User | null>(null);
+  const [authTimeout, setAuthTimeout] = useState(false);
   
   // Try to get user from localStorage first for faster loading
   useEffect(() => {
@@ -43,6 +44,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // Add a timeout to prevent infinite loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAuthTimeout(true);
+    }, 5000); // 5 seconds timeout
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   // Then fetch the latest user data from server
   const { data: user, isLoading, error, refetch } = useQuery<User | null>({
     queryKey: ['/api/users/me'],
@@ -50,6 +60,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initialData: localStorageUser,
     // Use staleTime to prevent too many refetches
     staleTime: 60 * 1000, // 1 minute
+    retry: 1, // Limit retries to prevent infinite loading
+    retryDelay: 1000, // 1 second between retries
+    // Prevent blocking the UI on errors
+    useErrorBoundary: false,
   });
 
   // Tạm thời bỏ qua initializing OneSignal để đảm bảo ứng dụng hoạt động ổn định
@@ -72,6 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Handle errors
   useEffect(() => {
     if (error) {
+      console.error("Authentication error:", error);
       toast({
         title: "Lỗi xác thực",
         description: "Không thể tải thông tin người dùng. Vui lòng thử lại sau.",
@@ -80,13 +95,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [error, toast]);
 
+  // Force-exit loading state after timeout
+  const finalIsLoading = isLoading && !authTimeout;
+
   const refreshUser = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['/api/users/me'] });
-    await refetch();
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['/api/users/me'] });
+      await refetch();
+    } catch (refreshError) {
+      console.error("Error refreshing user:", refreshError);
+      // Don't block the UI on refresh errors
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading: finalIsLoading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -97,18 +120,35 @@ export const useAuth = () => useContext(AuthContext);
 // Helper function for unauthorized behavior
 function getQueryFn({ on401 }: { on401: "returnNull" | "throw" }) {
   return async () => {
-    const res = await fetch('/api/users/me', {
-      credentials: 'include',
-    });
+    try {
+      const controller = new AbortController();
+      // Set a timeout to abort the fetch if it takes too long
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      
+      const res = await fetch('/api/users/me', {
+        credentials: 'include',
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
 
-    if (on401 === "returnNull" && res.status === 401) {
+      if (on401 === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${res.statusText}`);
+      }
+
+      return await res.json();
+    } catch (error) {
+      console.error("Authentication request failed:", error);
+      // If it's an AbortError, we timed out
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log("Authentication request timed out");
+      }
+      // Return null to avoid blocking the UI
       return null;
     }
-
-    if (!res.ok) {
-      throw new Error(`${res.status}: ${res.statusText}`);
-    }
-
-    return await res.json();
   };
 }
