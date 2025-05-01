@@ -19,39 +19,16 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Khai báo window.OneSignal
+// Khai báo window.OneSignal - OneSignal sẽ được tải riêng
 declare global {
   interface Window {
     OneSignal: any;
   }
 }
 
-// Đơn giản hóa việc triển khai OneSignal
-try {
-  const initOneSignal = () => {
-    window.OneSignal = window.OneSignal || {};
-    
-    // Create fake methods if needed
-    if (!window.OneSignal) {
-      window.OneSignal = {
-        init: () => {},
-        getUserId: (cb: Function) => { if (cb) cb(null); },
-        showNativePrompt: () => {},
-        login: () => {},
-        getDeviceState: () => Promise.resolve({ userId: null })
-      };
-    }
-  };
-  
-  // Khởi tạo OneSignal để các hàm không bị lỗi
-  initOneSignal();
-  
-  // OneSignal sẽ được khởi tạo đầy đủ trong useEffect hooks khi cần thiết
-  console.log('OneSignal đã được chuẩn bị, sẽ được khởi tạo khi cần');
-} catch (err) {
-  console.error('Lỗi chuẩn bị OneSignal:', err);
-  // Vẫn tiếp tục chạy ứng dụng
-}
+// OneSignal sẽ được tải và khởi tạo trong useEffect hook sau khi ứng dụng khởi động
+// Điều này đảm bảo ứng dụng luôn khởi động, ngay cả khi OneSignal gặp lỗi
+console.log('OneSignal sẽ được tải sau khi ứng dụng khởi động thành công');
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
