@@ -59,7 +59,8 @@ const validateAdminToken = async (req: Request, res: Response, next: Function) =
 const attachUser = async (req: Request, res: Response, next: Function) => {
   if (req.session && 'userId' in req.session) {
     try {
-      const user = await storage.getUserById(req.session.userId);
+      const userId = req.session.userId || '';
+      const user = await storage.getUserById(userId);
       req.user = user;
     } catch (error) {
       console.error("Error attaching user:", error);
@@ -597,9 +598,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error completing Zalo authentication:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const responseData = (error as any)?.response?.data || null;
       return res.status(500).json({ 
         message: "Lỗi xác thực Zalo.",
-        error: error.response?.data || error.message 
+        error: responseData || errorMessage 
       });
     }
   });
