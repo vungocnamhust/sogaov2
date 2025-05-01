@@ -34,75 +34,49 @@ export const formatDateTime = (date: string | Date) => {
   }).format(d);
 };
 
-// OneSignal initialization - sử dụng phiên bản mới (v16)
+// OneSignal initialization - phiên bản đơn giản
 export const initializeOneSignal = async (playerId?: string) => {
-  // Kiểm tra xem OneSignal đã được khởi tạo chưa
-  if (typeof window !== "undefined") {
-    try {
-      // Chờ cho đến khi OneSignal được tải
-      const waitForOneSignal = (maxWaitTime = 3000) => {
-        return new Promise<any>((resolve) => {
-          if (window.OneSignal) {
-            return resolve(window.OneSignal);
-          }
-          
-          let waitTime = 0;
-          const interval = 100;
-          const checkOneSignal = setInterval(() => {
-            waitTime += interval;
-            if (window.OneSignal) {
-              clearInterval(checkOneSignal);
-              resolve(window.OneSignal);
-            } else if (waitTime >= maxWaitTime) {
-              clearInterval(checkOneSignal);
-              console.warn('Đã hết thời gian chờ OneSignal');
-              resolve(null);
-            }
-          }, interval);
-        });
-      };
-      
-      // Đợi OneSignal khởi tạo (tối đa 3 giây)
-      const OneSignal = await waitForOneSignal();
-      
-      if (!OneSignal) {
-        return createFakeOneSignal();
-      }
-      
-      // Thêm xử lý lỗi và thử lại cho các hoạt động của OneSignal
-      try {
-        // Cập nhật player ID nếu đã đăng nhập
-        if (playerId) {
-          // Sử dụng OneSignal v16 API
-          await OneSignal.login(playerId);
-        }
-      } catch (err) {
-        console.warn("Lỗi khi thiết lập ID người dùng OneSignal:", err);
-      }
-      
-      return OneSignal;
-    } catch (error) {
-      console.error("Lỗi khởi tạo OneSignal:", error);
-      return createFakeOneSignal();
-    }
+  if (typeof window === "undefined") {
+    return null;
   }
-  return null;
+  
+  try {
+    // Đơn giản hóa khởi tạo
+    if (!window.OneSignal) {
+      console.log('OneSignal không khả dụng, trả về đối tượng giả');
+      return {
+        init: () => {},
+        getUserId: (cb: Function) => { if (cb) cb(null); },
+        showNativePrompt: () => {},
+        login: () => {},
+        getDeviceState: () => Promise.resolve({ userId: null }),
+        setExternalUserId: () => {}
+      };
+    }
+    
+    // Cơ bản thử cập nhật playerId nếu có
+    if (playerId && window.OneSignal) {
+      try {
+        // Cố gắng sử dụng phương thức phù hợp
+        if (typeof window.OneSignal.login === 'function') {
+          console.log('Sử dụng OneSignal.login() - v16');
+          window.OneSignal.login(playerId);
+        } else if (typeof window.OneSignal.setExternalUserId === 'function') {
+          console.log('Sử dụng OneSignal.setExternalUserId() - legacy');
+          window.OneSignal.setExternalUserId(playerId);
+        }
+      } catch (e) {
+        console.warn('Lỗi khi cập nhật player ID:', e);
+        // Tiếp tục mà không dừng
+      }
+    }
+    
+    return window.OneSignal;
+  } catch (error) {
+    console.error('Lỗi xử lý OneSignal:', error);
+    return null;
+  }
 };
-
-// Tạo đối tượng OneSignal giả để tránh lỗi
-function createFakeOneSignal() {
-  return {
-    getUserId: (callback: Function) => callback(null),
-    getExternalUserId: () => null,
-    showNativePrompt: () => {},
-    registerForPushNotifications: () => Promise.resolve(),
-    setExternalUserId: () => {},
-    login: () => Promise.resolve(),
-    logout: () => Promise.resolve(),
-    sendTag: () => {},
-    init: () => Promise.resolve()
-  };
-}
 
 // Check if app is installed (running in standalone mode)
 export const isAppInstalled = () => {
