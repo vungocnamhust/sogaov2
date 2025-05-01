@@ -2,20 +2,24 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import { pool } from "../db";
+import supabase from "../db/supabase";
+
+// Check if Supabase is configured
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+  console.warn("SUPABASE_URL and SUPABASE_KEY must be set for proper functionality");
+}
+
+// Verify Zalo credentials
+if (!process.env.ZALO_APP_ID || !process.env.ZALO_APP_SECRET || !process.env.ZALO_REDIRECT_URI) {
+  console.warn("Zalo API credentials are not fully configured");
+}
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Set up session with PostgreSQL store
-const PgSession = connectPgSimple(session);
+// Session configuration
 app.use(session({
-  store: new PgSession({
-    pool,
-    tableName: 'session' // Use default table name
-  }),
   secret: process.env.SESSION_SECRET || 'langgao_session_secret',
   resave: false,
   saveUninitialized: false,

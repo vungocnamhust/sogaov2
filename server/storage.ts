@@ -18,7 +18,11 @@ import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
 // Users
+// Redirect all storage functions to the Supabase implementation
+import * as supabaseStorage from '../db/supabase';
+
 export async function getUserById(id: string): Promise<User | null> {
+  return supabaseStorage.getUserById(id);
   const result = await db.select().from(users).where(eq(users.id, id));
   return result.length > 0 ? result[0] : null;
 }

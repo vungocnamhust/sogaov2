@@ -494,12 +494,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initiate Zalo OAuth flow
   app.post("/api/admin/connect-zalo", validateAdminToken, async (req: Request, res: Response) => {
     try {
-      // Generate PKCE challenge and verifier
+      // Generate PKCE challenge and verifier based on Zalo docs
       const verifier = crypto.randomBytes(32).toString('base64url');
       const challenge = crypto
         .createHash('sha256')
         .update(verifier)
-        .digest('base64url');
+        .digest('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
       
       // Store verifier in database for later verification
       await storage.saveZaloSettings({ code_verifier: verifier });
@@ -507,12 +510,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate state parameter to prevent CSRF
       const state = crypto.randomBytes(16).toString('hex');
       
-      // Get redirect URI from environment or use a default
-      const redirectUri = process.env.ZALO_REDIRECT_URI || "https://example.com/admin/dashboard";
+      // Get redirect URI from environment
+      const redirectUri = process.env.ZALO_REDIRECT_URI || "";
       
-      // Generate Zalo OAuth URL
-      const appId = process.env.ZALO_APP_ID || "your_zalo_app_id";
-      const authUrl = `https://oauth.zaloapp.com/v4/permission?app_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${challenge}&state=${state}`;
+      // Generate Zalo OAuth URL based on documentation
+      const appId = process.env.ZALO_APP_ID || "";
+      
+      // Using the Zalo Official Account API endpoints
+      const authUrl = `https://oauth.zaloapp.com/v4/oa/permission?app_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${challenge}&code_challenge_method=S256&state=${state}`;
       
       return res.json({ authUrl });
     } catch (error) {
@@ -537,31 +542,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Không tìm thấy mã xác thực Zalo." });
       }
       
-      // Exchange code for access token
-      const appId = process.env.ZALO_APP_ID || "your_zalo_app_id";
-      const appSecret = process.env.ZALO_APP_SECRET || "your_zalo_app_secret";
-      const redirectUri = process.env.ZALO_REDIRECT_URI || "https://example.com/admin/dashboard";
+      // Exchange code for access token - follow Zalo documentation
+      const appId = process.env.ZALO_APP_ID || "";
+      const appSecret = process.env.ZALO_APP_SECRET || "";
+      const redirectUri = process.env.ZALO_REDIRECT_URI || "";
+      
+      // Prepare form data
+      const formData = new URLSearchParams();
+      formData.append('code', code);
+      formData.append('app_id', appId);
+      formData.append('grant_type', 'authorization_code');
+      formData.append('code_verifier', settings.code_verifier);
       
       const tokenResponse = await axios.post(
-        'https://oauth.zaloapp.com/v4/access_token',
-        {
-          app_id: appId,
-          app_secret: appSecret,
-          code,
-          code_verifier: settings.code_verifier,
-          grant_type: 'authorization_code',
-          redirect_uri: redirectUri
-        },
+        'https://oauth.zaloapp.com/v4/oa/access_token',
+        formData.toString(),
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'secret_key': appSecret
           }
         }
       );
       
       const { access_token, refresh_token, expires_in } = tokenResponse.data;
       
-      // Get OA info
+      // Get OA info using Zalo Open API
       const oaInfoResponse = await axios.get(
         'https://openapi.zalo.me/v2.0/oa/getoa',
         {
@@ -580,7 +586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.saveZaloSettings({
         access_token,
         refresh_token,
-        expires_at: expiresAt,
+        expires_at: expiresAt.toISOString(),
         oa_name: oaName,
         code_verifier: null // Clear verifier after use
       });
@@ -591,7 +597,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error completing Zalo authentication:", error);
-      return res.status(500).json({ message: "Lỗi xác thực Zalo." });
+      return res.status(500).json({ 
+        message: "Lỗi xác thực Zalo.",
+        error: error.response?.data || error.message 
+      });
     }
   });
   
