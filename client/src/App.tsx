@@ -38,21 +38,7 @@ function Router() {
 }
 
 function App() {
-  // Register service worker for PWA
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/service-worker.js")
-          .then((registration) => {
-            console.log("SW registered: ", registration);
-          })
-          .catch((error) => {
-            console.log("SW registration failed: ", error);
-          });
-      });
-    }
-  }, []);
+  // Service worker registration is now handled in main.tsx
 
   return (
     <QueryClientProvider client={queryClient}>
