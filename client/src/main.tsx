@@ -26,10 +26,6 @@ declare global {
   }
 }
 
-// Để đảm bảo ứng dụng luôn khởi động, chúng ta sẽ không khởi tạo OneSignal trong quá trình render
-// OneSignal sẽ được tải riêng sau khi ứng dụng đã khởi động hoàn toàn
-console.log('React app starting without OneSignal to ensure stability');
-
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
