@@ -189,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             'https://onesignal.com/api/v1/notifications',
             {
               app_id: process.env.ONESIGNAL_APP_ID,
-              filters: [{ field: 'tag', key: 'role', relation: '=', value: 'admin' }],
+              filters: [{ field: 'tag', key: 'role', relation: '=', value: 'admin' }], // Lọc theo tag trong OneSignal v16
               headings: { en: 'Đơn hàng mới', vi: 'Đơn hàng mới' },
               contents: { 
                 en: `${user.name} đã đặt ${validatedData.quantity}kg gạo`, 
@@ -409,7 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             'https://onesignal.com/api/v1/notifications',
             {
               app_id: process.env.ONESIGNAL_APP_ID,
-              include_external_user_ids: [order.user.player_id], // Sử dụng external_user_ids thay vì player_ids trong v16
+              include_player_ids: [order.user.player_id], // Sử dụng OneSignal v16 với player_ids
               headings: { en: title, vi: title },
               contents: { en: message, vi: message },
               data: { 
@@ -641,6 +641,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   
+  // Lưu trữ WebSocket connections theo user ID
+  const wsConnections: Record<string, WebSocket[]> = {};
+  
   // Thiết lập WebSocket server cho real-time updates
   const wss = new WebSocketServer({ 
     server: httpServer, 
@@ -649,20 +652,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   wss.on('connection', (ws: WebSocket) => {
     console.log('WebSocket client connected');
+    let userId: string | null = null;
     
     // Gửi thông báo chào mừng
     ws.send(JSON.stringify({ type: 'connection', message: 'Connected to WebSocket server' }));
     
     // Xử lý tin nhắn từ client
     ws.on('message', (message: string) => {
-      console.log('Received message:', message);
-      
       try {
         const data = JSON.parse(message.toString());
+        console.log('Received message:', data);
         
         // Xử lý các loại tin nhắn khác nhau
         if (data.type === 'ping') {
           ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+        } 
+        // Xử lý đăng ký user ID
+        else if (data.type === 'register' && data.userId) {
+          userId = data.userId;
+          console.log(`Registering WebSocket for user: ${userId}`);
+          
+          // Lưu kết nối theo user ID
+          if (!wsConnections[userId]) {
+            wsConnections[userId] = [];
+          }
+          wsConnections[userId].push(ws);
+          
+          // Thông báo đăng ký thành công
+          ws.send(JSON.stringify({ 
+            type: 'registered', 
+            userId, 
+            message: 'Successfully registered for real-time updates' 
+          }));
         }
       } catch (error) {
         console.error('Error parsing WebSocket message:', error);
@@ -672,6 +693,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Xử lý khi client ngắt kết nối
     ws.on('close', () => {
       console.log('WebSocket client disconnected');
+      
+      // Xóa kết nối khỏi danh sách nếu đã đăng ký
+      if (userId && wsConnections[userId]) {
+        wsConnections[userId] = wsConnections[userId].filter(conn => conn !== ws);
+        
+        // Xóa danh sách nếu không còn kết nối
+        if (wsConnections[userId].length === 0) {
+          delete wsConnections[userId];
+        }
+      }
     });
   });
   

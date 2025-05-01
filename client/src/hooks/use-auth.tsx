@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { initializeOneSignal } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -55,20 +54,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize OneSignal when user is available
   useEffect(() => {
-    if (user?.player_id) {
-      initializeOneSignal(user.player_id);
-    } else if (user) {
-      // Try to get OneSignal player ID and update user
-      const updatePlayerID = async () => {
-        try {
-          const OneSignal = await initializeOneSignal();
-          if (OneSignal) {
+    if (!user) return;
+    
+    // Tải module OneSignal một cách động
+    const connectOneSignal = async () => {
+      try {
+        // Lazy load OneSignal module
+        const { registerPlayerId, requestNotificationPermission } = await import('../lib/onesignal');
+        
+        // Nếu đã có player_id, đăng ký với OneSignal
+        if (user.player_id) {
+          registerPlayerId(user.player_id);
+        } else {
+          // Nếu chưa có player_id, kiểm tra và lấy từ OneSignal
+          if (window.OneSignal) {
             try {
-              // Sử dụng phương thức mới của OneSignal v16
-              if (OneSignal.getDeviceState) {
+              if (window.OneSignal.getDeviceState) {
                 // Cách mới (v16)
-                const deviceState = await OneSignal.getDeviceState();
-                if (deviceState && deviceState.userId && deviceState.userId !== user.player_id) {
+                const deviceState = await window.OneSignal.getDeviceState();
+                if (deviceState && deviceState.userId) {
                   // Cập nhật player_id trên server
                   fetch('/api/users/player-id', {
                     method: 'POST',
@@ -77,11 +81,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     credentials: 'include',
                   }).catch(console.error);
                 }
-              } else {
+              } else if (window.OneSignal.getUserId) {
                 // Cách cũ
-                OneSignal.getUserId((id: string) => {
-                  if (id && id !== user.player_id) {
-                    // Cập nhật player_id trên server
+                window.OneSignal.getUserId((id: string) => {
+                  if (id) {
                     fetch('/api/users/player-id', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -92,21 +95,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 });
               }
               
-              // Yêu cầu quyền thông báo - phương thức chung
-              if (OneSignal.showNativePrompt) {
-                OneSignal.showNativePrompt();
-              }
+              // Yêu cầu quyền thông báo
+              requestNotificationPermission();
             } catch (err) {
-              console.warn("Lỗi khi lấy thông tin thiết bị OneSignal:", err);
+              console.warn("Lỗi khi tương tác với OneSignal:", err);
             }
           }
-        } catch (error) {
-          console.error("Lỗi khởi tạo OneSignal:", error);
         }
-      };
-      
-      updatePlayerID();
-    }
+      } catch (error) {
+        console.warn("Không thể tải module OneSignal:", error);
+        // Ứng dụng vẫn tiếp tục hoạt động bình thường
+      }
+    };
+    
+    // Đợi 3 giây để OneSignal được tải hoàn toàn
+    const timer = setTimeout(connectOneSignal, 3000);
+    return () => clearTimeout(timer);
   }, [user]);
 
   // Update localStorage when user changes

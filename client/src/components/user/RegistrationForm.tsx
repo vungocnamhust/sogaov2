@@ -18,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { initializeOneSignal } from "@/lib/utils";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -43,36 +42,43 @@ export default function RegistrationForm() {
   const { refreshUser } = useAuth();
   const [playerId, setPlayerId] = useState<string | null>(null);
 
-  // Initialize OneSignal to get player ID (v16)
+  // Kiểm tra OneSignal để lấy player ID (v16)
   useEffect(() => {
-    const setupOneSignal = async () => {
-      try {
-        const OneSignal = await initializeOneSignal();
-        if (OneSignal) {
-          try {
-            // V16 API sử dụng OSDeviceState thay vì getUserId
-            const deviceState = await OneSignal.getDeviceState();
-            if (deviceState && deviceState.userId) {
-              setPlayerId(deviceState.userId);
-            } else {
-              // Fallback cho phiên bản cũ
-              OneSignal.getUserId && OneSignal.getUserId((id: string) => {
-                if (id) {
-                  setPlayerId(id);
+    // Hàm kiểm tra OneSignal
+    const checkForOneSignal = () => {
+      // Nếu OneSignal đã được tải
+      if (window.OneSignal) {
+        try {
+          // Thử sử dụng API v16
+          if (window.OneSignal.getDeviceState) {
+            window.OneSignal.getDeviceState()
+              .then((deviceState: any) => {
+                if (deviceState && deviceState.userId) {
+                  setPlayerId(deviceState.userId);
                 }
+              })
+              .catch((err: any) => {
+                console.warn("Lỗi khi lấy trạng thái thiết bị:", err);
               });
-            }
-          } catch (err) {
-            console.warn("Lỗi lấy ID thiết bị từ OneSignal:", err);
+          } else if (window.OneSignal.getUserId) {
+            // Fallback cho phiên bản cũ
+            window.OneSignal.getUserId((id: string) => {
+              if (id) {
+                setPlayerId(id);
+              }
+            });
           }
+        } catch (err) {
+          console.warn("Lỗi khi tương tác với OneSignal:", err);
         }
-      } catch (error) {
-        console.error("Lỗi thiết lập OneSignal:", error);
-        // Tiếp tục đăng ký mà không có player ID
       }
     };
+
+    // Kiểm tra ngay lập tức và sau 3 giây (để cho phép OneSignal tải)
+    checkForOneSignal();
+    const timer = setTimeout(checkForOneSignal, 3000);
     
-    setupOneSignal();
+    return () => clearTimeout(timer);
   }, []);
 
   // Define form with default values
