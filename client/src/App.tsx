@@ -37,21 +37,6 @@ function Router() {
 }
 
 function App() {
-  // Tải OneSignal sau 2 giây để đảm bảo trang đã tải xong 
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      try {
-        // Lazy load OneSignal module
-        const { loadOneSignal } = await import('./lib/onesignal');
-        loadOneSignal();
-      } catch (err) {
-        console.warn('Không thể tải OneSignal:', err);
-      }
-    }, 2000);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
     <>
       <Router />

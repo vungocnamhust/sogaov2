@@ -42,43 +42,9 @@ export default function RegistrationForm() {
   const { refreshUser } = useAuth();
   const [playerId, setPlayerId] = useState<string | null>(null);
 
-  // Kiểm tra OneSignal để lấy player ID (v16)
+  // Tạm thời bỏ qua việc lấy player ID từ OneSignal để đảm bảo đăng ký hoạt động
   useEffect(() => {
-    // Hàm kiểm tra OneSignal
-    const checkForOneSignal = () => {
-      // Nếu OneSignal đã được tải
-      if (window.OneSignal) {
-        try {
-          // Thử sử dụng API v16
-          if (window.OneSignal.getDeviceState) {
-            window.OneSignal.getDeviceState()
-              .then((deviceState: any) => {
-                if (deviceState && deviceState.userId) {
-                  setPlayerId(deviceState.userId);
-                }
-              })
-              .catch((err: any) => {
-                console.warn("Lỗi khi lấy trạng thái thiết bị:", err);
-              });
-          } else if (window.OneSignal.getUserId) {
-            // Fallback cho phiên bản cũ
-            window.OneSignal.getUserId((id: string) => {
-              if (id) {
-                setPlayerId(id);
-              }
-            });
-          }
-        } catch (err) {
-          console.warn("Lỗi khi tương tác với OneSignal:", err);
-        }
-      }
-    };
-
-    // Kiểm tra ngay lập tức và sau 3 giây (để cho phép OneSignal tải)
-    checkForOneSignal();
-    const timer = setTimeout(checkForOneSignal, 3000);
-    
-    return () => clearTimeout(timer);
+    console.log('Registration form ready for user input');
   }, []);
 
   // Define form with default values

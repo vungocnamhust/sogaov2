@@ -19,16 +19,16 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Khai báo window.OneSignal - OneSignal sẽ được tải riêng
+// Khai báo interface cho window.OneSignal để TypeScript không báo lỗi
 declare global {
   interface Window {
     OneSignal: any;
   }
 }
 
-// OneSignal sẽ được tải và khởi tạo trong useEffect hook sau khi ứng dụng khởi động
-// Điều này đảm bảo ứng dụng luôn khởi động, ngay cả khi OneSignal gặp lỗi
-console.log('OneSignal sẽ được tải sau khi ứng dụng khởi động thành công');
+// Để đảm bảo ứng dụng luôn khởi động, chúng ta sẽ không khởi tạo OneSignal trong quá trình render
+// OneSignal sẽ được tải riêng sau khi ứng dụng đã khởi động hoàn toàn
+console.log('React app starting without OneSignal to ensure stability');
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>

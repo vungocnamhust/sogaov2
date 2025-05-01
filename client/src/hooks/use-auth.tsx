@@ -52,65 +52,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     staleTime: 60 * 1000, // 1 minute
   });
 
-  // Initialize OneSignal when user is available
+  // Tạm thời bỏ qua initializing OneSignal để đảm bảo ứng dụng hoạt động ổn định
+  // Chức năng thông báo sẽ được thêm lại sau
   useEffect(() => {
-    if (!user) return;
-    
-    // Tải module OneSignal một cách động
-    const connectOneSignal = async () => {
-      try {
-        // Lazy load OneSignal module
-        const { registerPlayerId, requestNotificationPermission } = await import('../lib/onesignal');
-        
-        // Nếu đã có player_id, đăng ký với OneSignal
-        if (user.player_id) {
-          registerPlayerId(user.player_id);
-        } else {
-          // Nếu chưa có player_id, kiểm tra và lấy từ OneSignal
-          if (window.OneSignal) {
-            try {
-              if (window.OneSignal.getDeviceState) {
-                // Cách mới (v16)
-                const deviceState = await window.OneSignal.getDeviceState();
-                if (deviceState && deviceState.userId) {
-                  // Cập nhật player_id trên server
-                  fetch('/api/users/player-id', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ player_id: deviceState.userId }),
-                    credentials: 'include',
-                  }).catch(console.error);
-                }
-              } else if (window.OneSignal.getUserId) {
-                // Cách cũ
-                window.OneSignal.getUserId((id: string) => {
-                  if (id) {
-                    fetch('/api/users/player-id', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ player_id: id }),
-                      credentials: 'include',
-                    }).catch(console.error);
-                  }
-                });
-              }
-              
-              // Yêu cầu quyền thông báo
-              requestNotificationPermission();
-            } catch (err) {
-              console.warn("Lỗi khi tương tác với OneSignal:", err);
-            }
-          }
-        }
-      } catch (error) {
-        console.warn("Không thể tải module OneSignal:", error);
-        // Ứng dụng vẫn tiếp tục hoạt động bình thường
-      }
-    };
-    
-    // Đợi 3 giây để OneSignal được tải hoàn toàn
-    const timer = setTimeout(connectOneSignal, 3000);
-    return () => clearTimeout(timer);
+    if (user) {
+      console.log('User authenticated:', user.name);
+    }
   }, [user]);
 
   // Update localStorage when user changes
