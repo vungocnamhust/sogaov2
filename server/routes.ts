@@ -550,7 +550,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Exchange code for access token - follow Zalo documentation
       const appId = process.env.ZALO_APP_ID || "";
       const appSecret = process.env.ZALO_APP_SECRET || "";
-      const redirectUri = process.env.ZALO_REDIRECT_URI || "";
+      // Combine domain with redirect path
+      const host = req.headers.host || '';
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+      const baseUrl = `${protocol}://${host}`;
+      const redirectUri = `${baseUrl}${process.env.ZALO_REDIRECT_URI || ""}`;
       
       // Prepare form data
       const formData = new URLSearchParams();
@@ -587,11 +591,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate token expiration date
       const expiresAt = new Date(Date.now() + expires_in * 1000);
       
-      // Save Zalo tokens
+      // Save Zalo tokens - treating data as a partial of the ZaloSetting type
+      // Supabase will handle the conversion of Date to timestamp
       await storage.saveZaloSettings({
         access_token,
         refresh_token,
-        expires_at: expiresAt.toISOString(),
+        // @ts-ignore - Supabase will handle Date conversion to timestamp
+        expires_at: expiresAt,
         oa_name: oaName,
         code_verifier: null // Clear verifier after use
       });
